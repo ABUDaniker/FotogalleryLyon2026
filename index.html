@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fotoupload - Exkursion Lyon 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-blue-50 flex items-center justify-center min-h-screen p-4 font-sans text-slate-800">
+    <div class="absolute top-10 left-10 text-6xl opacity-20 transform -rotate-12 hidden md:block">🥐</div>
+    <div class="absolute bottom-20 right-10 text-6xl opacity-20 transform rotate-12 hidden md:block">🦁</div>
+    
+    <div class="bg-white p-8 sm:p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-blue-600 relative z-10">
+        <div class="text-5xl mb-4">📸 🚌 🇫🇷</div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-blue-900 mb-2">Exkursion Lyon 2026</h1>
+        <p class="text-slate-600 font-medium mb-8">Lade deine besten Momente direkt vom Handy hoch!</p>
+        
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="mb-6 text-emerald-900 bg-emerald-100 p-4 rounded-xl font-bold border-2 border-emerald-200 text-sm">
+              {% for message in messages %}
+                <p>{{ message }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="space-y-6">
+            <div class="flex items-center justify-center w-full">
+                <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-48 border-4 border-dashed border-blue-300 rounded-2xl cursor-pointer bg-blue-50 hover:bg-blue-100 transition duration-300 p-6">
+                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <div class="text-4xl mb-3 text-blue-600 animate-bounce">📱</div>
+                        <p id="file-name-label" class="mb-2 text-xl text-blue-800 font-extrabold">Foto auswählen oder aufnehmen 📸</p>
+                        <p class="text-xs text-blue-500 font-medium">Unterstützt alle Bildformate</p>
+                    </div>
+                    <input id="dropzone-file" type="file" name="photo" class="hidden" accept="image/*" />
+                </label>
+            </div> 
+            
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xl py-4 px-4 rounded-2xl transition duration-300 shadow-[0_4px_0_rgb(29,78,216)] hover:shadow-[0_2px_0_rgb(29,78,216)] hover:translate-y-[2px]">
+                Hochladen 🚀
+            </button>
+        </form>
+        
+        <div class="mt-8 text-sm text-slate-400">
+            <a href="/gallery" class="underline hover:text-blue-600">Zur Fotogalerie</a> | <a href="/admin" class="underline hover:text-blue-600">Admin-Bereich</a>
+        </div>
+    </div>
+
+    <script>
+        // Zeigt an, ob das Foto geladen wurde
+        document.getElementById('dropzone-file').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const fileName = e.target.files[0].name;
+                const labelText = document.getElementById('file-name-label');
+                labelText.textContent = `Bereit: ${fileName}`;
+                labelText.className = "mb-2 text-xl text-emerald-700 font-extrabold";
+            }
+        });
+    </script>
+</body>
+</html>
