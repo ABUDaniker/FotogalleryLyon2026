@@ -3,212 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin – Fotogallery Lyon 2026</title>
+    <title>Fotogallerie - Exkursion Lyon 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .fade-out { opacity: 0; transition: opacity 1.5s ease-in-out; }
+        .fade-in { opacity: 1; transition: opacity 1.5s ease-in-out; }
+        #slide-container { transition: transform 0.8s ease-out, opacity 1.5s ease-in-out; }
+    </style>
 </head>
-<body class="bg-blue-50 min-h-screen p-4 md:p-8 font-sans text-slate-800">
-    <div class="max-w-5xl mx-auto">
-
-        <!-- Header -->
-        <div class="bg-white p-6 rounded-3xl shadow-lg border-t-8 border-blue-800 mb-8 flex flex-col sm:flex-row justify-between items-center text-center sm:text-left">
-            <h1 class="text-3xl font-extrabold text-blue-900 mb-4 sm:mb-0">🛠️ Admin – Fotogallery Lyon 2026</h1>
-            <a href="index.html" class="text-blue-600 hover:text-blue-800 font-bold underline transition">Zurück zum Upload</a>
+<body class="bg-slate-900 min-h-screen font-sans text-slate-800 flex flex-col m-0 overflow-hidden">
+    
+    <div class="flex flex-row justify-between items-center bg-blue-800 text-white px-6 py-4 shadow-2xl z-20 relative border-b-4 border-blue-900">
+        <div class="flex items-center space-x-4">
+            <div class="text-2xl md:text-3xl">🚌</div>
+            <div>
+                <h1 class="text-lg md:text-2xl font-extrabold tracking-widest drop-shadow-md uppercase">
+                    Exkursion Lyon 2026
+                </h1>
+                <p class="text-xs md:text-sm text-blue-200 font-medium">Live-Momente unserer Reise</p>
+            </div>
         </div>
-
-        <!-- Flash messages -->
-        <div id="flash-message" class="mb-6 text-emerald-900 bg-emerald-100 p-4 rounded-xl font-bold border-2 border-emerald-200 hidden"></div>
-        <div id="error-message" class="mb-6 text-red-900 bg-red-100 p-4 rounded-xl font-bold border-2 border-red-200 hidden"></div>
-
-        <!-- Login Form -->
-        <div id="login-panel" class="bg-white p-8 rounded-3xl shadow-xl max-w-sm mx-auto text-center border-2 border-slate-200 mt-12">
-            <div class="text-6xl mb-4">🤫</div>
-            <h2 class="text-2xl font-bold mb-6 text-slate-700">Passwort eingeben</h2>
-            <form id="login-form" class="space-y-4">
-                <input type="password" id="password-input" placeholder="Passwort..." class="w-full p-4 border-2 border-slate-300 rounded-xl focus:border-blue-500 outline-none text-center text-lg" required>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-4 px-4 rounded-xl transition shadow-[0_4px_0_rgb(29,78,216)] hover:translate-y-[2px] hover:shadow-[0_2px_0_rgb(29,78,216)]">
-                    Login 🔓
-                </button>
-            </form>
-        </div>
-
-        <!-- Management Panel (hidden until login) -->
-        <div id="admin-panel" class="hidden">
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 px-2">
-                <h2 id="photo-count" class="text-2xl font-bold text-slate-700 mb-4 sm:mb-0">Alle Fotos</h2>
-                <div class="flex gap-4">
-                    <button onclick="deleteAllPhotos()" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 px-6 rounded-xl transition shadow text-center border border-red-200">🗑️ Alle löschen</button>
-                    <button onclick="logout()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-6 rounded-xl transition shadow text-center">Abmelden</button>
-                </div>
-            </div>
-
-            <!-- Loading -->
-            <div id="admin-loader" class="text-center py-8">
-                <div class="w-8 h-8 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-2"></div>
-                <p class="text-sm text-slate-500">Fotos werden geladen...</p>
-            </div>
-
-            <div id="photos-grid" class="bg-white rounded-3xl shadow-xl p-4 sm:p-8 overflow-hidden border-2 border-slate-100">
-                <!-- Filled by JS -->
-            </div>
-
-            <!-- Empty state -->
-            <div id="admin-empty" class="hidden text-center py-16 bg-white rounded-3xl shadow-xl border-2 border-slate-100 p-8">
-                <div class="text-6xl mb-4 opacity-50">📂</div>
-                <p class="text-xl font-bold text-slate-500">Noch keine Fotos zum Verwalten.</p>
-            </div>
+        <div class="flex items-center space-x-4">
+            <a href="/" class="text-xs md:text-sm bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-xl text-white font-bold transition shadow-md">
+                ➕ Hochladen
+            </a>
         </div>
     </div>
 
+    <div class="flex-1 flex items-center justify-center relative p-8">
+        {% if photos %}
+        <div id="slide-container" class="bg-white p-4 pb-12 rounded-xl shadow-2xl max-w-lg w-full transform rotate-0 scale-98 aspect-square flex flex-col items-center justify-center">
+            <div class="w-full h-5/6 overflow-hidden rounded-lg shadow-inner bg-slate-100 flex items-center justify-center">
+                <img id="slide-img" src="{{ url_for('uploaded_file', filename=photos[0]) }}" class="w-full h-full object-cover" alt="Fotogalerie Foto">
+            </div>
+            <div class="mt-4 text-center font-bold text-blue-600 text-sm md:text-base tracking-wider uppercase">
+                #Lyon2026 🇫🇷
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center text-slate-400 p-8 bg-slate-800 rounded-3xl max-w-md w-full border border-slate-700 shadow-xl">
+            <div class="text-6xl mb-4 opacity-50">📂</div>
+            <h2 class="text-2xl font-extrabold text-white mb-2">Keine Fotos vorhanden</h2>
+            <p class="text-sm text-slate-400 mb-6">Lade als Erster ein Bild von unterwegs hoch!</p>
+            <a href="/" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition duration-300">
+                Jetzt hochladen 🚀
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if photos %}
     <script>
-        // ── Supabase Setup ──
-        const SUPABASE_URL = 'https://vshlpndqktpmtnwarxui.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_4RadbUY4N2NV5SeaUrvlPg_spcQoznE';
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const BUCKET = 'lyon-photos';
-        const ADMIN_PASSWORD = '!Lyon.2026';
+        const photos = {{ photos|tojson }};
+        let currentIndex = 0;
+        const slideContainer = document.getElementById('slide-container');
+        const imgElement = document.getElementById('slide-img');
 
-        let isLoggedIn = false;
-        let allFiles = [];
+        function showNextPhoto() {
+            // Ausblenden
+            slideContainer.classList.remove('fade-in');
+            slideContainer.classList.add('fade-out');
 
-        // ── Login ──
-        document.getElementById('login-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const pw = document.getElementById('password-input').value;
-            if (pw === ADMIN_PASSWORD) {
-                isLoggedIn = true;
-                sessionStorage.setItem('lyon_admin', 'true');
-                document.getElementById('login-panel').classList.add('hidden');
-                document.getElementById('admin-panel').classList.remove('hidden');
-                loadAdminPhotos();
-            } else {
-                showError('Falsches Passwort!');
-            }
-        });
-
-        // Check session
-        if (sessionStorage.getItem('lyon_admin') === 'true') {
-            isLoggedIn = true;
-            document.getElementById('login-panel').classList.add('hidden');
-            document.getElementById('admin-panel').classList.remove('hidden');
-            loadAdminPhotos();
-        }
-
-        function logout() {
-            sessionStorage.removeItem('lyon_admin');
-            isLoggedIn = false;
-            location.reload();
-        }
-
-        // ── Load photos ──
-        async function loadAdminPhotos() {
-            const loader = document.getElementById('admin-loader');
-            const grid = document.getElementById('photos-grid');
-            const empty = document.getElementById('admin-empty');
-
-            loader.classList.remove('hidden');
-            grid.innerHTML = '';
-            empty.classList.add('hidden');
-
-            try {
-                const { data, error } = await sb.storage.from(BUCKET).list('', {
-                    limit: 500,
-                    sortBy: { column: 'created_at', order: 'desc' }
-                });
-
-                if (error) throw error;
-
-                allFiles = (data || []).filter(f =>
-                    f.name && /\.(jpg|jpeg|png|gif|webp)$/i.test(f.name)
-                );
-
-                loader.classList.add('hidden');
-
-                if (allFiles.length === 0) {
-                    empty.classList.remove('hidden');
-                    grid.classList.add('hidden');
-                    document.getElementById('photo-count').textContent = 'Alle Fotos (0)';
+            setTimeout(() => {
+                currentIndex = (currentIndex + 1) % photos.length;
+                
+                // Neuladen, falls neue Fotos hinzugekommen sind
+                if (currentIndex >= photos.length) {
+                    window.location.reload();
                     return;
                 }
+                
+                imgElement.src = `/uploads/${photos[currentIndex]}`;
+                
+                // Zufälliger Polaroid Effekt
+                const randomRotate = (Math.random() * 4) - 2; 
+                slideContainer.style.transform = `rotate(${randomRotate}deg) scale(0.98)`;
 
-                document.getElementById('photo-count').textContent = `Alle Fotos (${allFiles.length})`;
-                grid.classList.remove('hidden');
+                // Einblenden
+                slideContainer.classList.remove('fade-out');
+                slideContainer.classList.add('fade-in');
 
-                let gridHtml = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">';
-                allFiles.forEach(file => {
-                    const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(file.name);
-                    const publicUrl = urlData.publicUrl;
+                setTimeout(() => {
+                    slideContainer.style.transform = `rotate(${randomRotate}deg) scale(1.0)`;
+                }, 100);
+            }, 1500); 
+        }
 
-                    gridHtml += `
-                        <div class="relative group rounded-xl overflow-hidden border-2 border-slate-200 shadow-sm">
-                            <img src="${publicUrl}" class="w-full aspect-square object-cover" alt="${file.name}" />
-                            <div class="absolute inset-0 bg-black bg-opacity-70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-2">
-                                <p class="text-white text-xs text-center mb-3 truncate w-full px-2">${file.name}</p>
-                                <button onclick="deletePhoto('${file.name}')" class="bg-red-500 hover:bg-red-600 text-white font-black py-2 px-4 rounded-xl shadow-lg flex items-center transform hover:scale-105 transition">
-                                    🗑️ Löschen
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                });
-                gridHtml += '</div>';
-                grid.innerHTML = gridHtml;
-
-            } catch (err) {
-                console.error('Error loading admin photos:', err);
-                loader.innerHTML = '<p class="text-red-500">Fehler beim Laden.</p>';
+        if (photos.length > 0) {
+            if (photos.length === 1) {
+                setTimeout(() => window.location.reload(), 10000);
+            } else {
+                setInterval(showNextPhoto, 10000);
             }
-        }
-
-        // ── Delete single photo ──
-        async function deletePhoto(fileName) {
-            if (!confirm(`Möchtest du "${fileName}" wirklich dauerhaft löschen?`)) return;
-
-            try {
-                const { error } = await sb.storage.from(BUCKET).remove([fileName]);
-                if (error) throw error;
-                showFlash(`Foto "${fileName}" wurde gelöscht!`);
-                loadAdminPhotos();
-            } catch (err) {
-                console.error('Delete error:', err);
-                showError('Fehler beim Löschen: ' + (err.message || 'Unbekannter Fehler'));
-            }
-        }
-
-        // ── Delete all photos ──
-        async function deleteAllPhotos() {
-            if (!confirm('Möchtest du wirklich ALLE Fotos dauerhaft löschen? Diese Aktion kann nicht rückgängig gemacht werden!')) return;
-
-            try {
-                const fileNames = allFiles.map(f => f.name);
-                if (fileNames.length === 0) return;
-
-                const { error } = await sb.storage.from(BUCKET).remove(fileNames);
-                if (error) throw error;
-                showFlash('Alle Fotos wurden gelöscht!');
-                loadAdminPhotos();
-            } catch (err) {
-                console.error('Delete all error:', err);
-                showError('Fehler beim Löschen: ' + (err.message || 'Unbekannter Fehler'));
-            }
-        }
-
-        // ── Helpers ──
-        function showFlash(msg) {
-            const el = document.getElementById('flash-message');
-            el.textContent = msg;
-            el.classList.remove('hidden');
-            document.getElementById('error-message').classList.add('hidden');
-            setTimeout(() => el.classList.add('hidden'), 5000);
-        }
-
-        function showError(msg) {
-            const el = document.getElementById('error-message');
-            el.textContent = msg;
-            el.classList.remove('hidden');
-            document.getElementById('flash-message').classList.add('hidden');
-            setTimeout(() => el.classList.add('hidden'), 5000);
         }
     </script>
+    {% endif %}
 </body>
 </html>

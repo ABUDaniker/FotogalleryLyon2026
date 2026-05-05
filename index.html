@@ -3,26 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fotogallery Lyon 2026 – Upload</title>
+    <title>Fotoupload - Exkursion Lyon 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-blue-50 flex items-center justify-center min-h-screen p-4 font-sans text-slate-800">
     <div class="absolute top-10 left-10 text-6xl opacity-20 transform -rotate-12 hidden md:block">🥐</div>
     <div class="absolute bottom-20 right-10 text-6xl opacity-20 transform rotate-12 hidden md:block">🦁</div>
-    <div class="absolute top-20 right-20 text-6xl opacity-20 transform rotate-6 hidden md:block">🇫🇷</div>
-    <div class="absolute bottom-10 left-20 text-6xl opacity-20 transform -rotate-6 hidden md:block">📸</div>
-
+    
     <div class="bg-white p-8 sm:p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-blue-600 relative z-10">
         <div class="text-5xl mb-4">📸 🚌 🇫🇷</div>
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-blue-900 mb-2">Fotogallery Lyon 2026</h1>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-blue-900 mb-2">Exkursion Lyon 2026</h1>
         <p class="text-slate-600 font-medium mb-8">Lade deine besten Momente direkt vom Handy hoch!</p>
+        
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="mb-6 text-emerald-900 bg-emerald-100 p-4 rounded-xl font-bold border-2 border-emerald-200 text-sm">
+              {% for message in messages %}
+                <p>{{ message }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
 
-        <!-- Flash messages -->
-        <div id="flash-message" class="mb-6 text-emerald-900 bg-emerald-100 p-4 rounded-xl font-bold border-2 border-emerald-200 text-sm hidden"></div>
-        <div id="error-message" class="mb-6 text-red-900 bg-red-100 p-4 rounded-xl font-bold border-2 border-red-200 text-sm hidden"></div>
-
-        <form id="upload-form" class="space-y-6">
+        <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="space-y-6">
             <div class="flex items-center justify-center w-full">
                 <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-48 border-4 border-dashed border-blue-300 rounded-2xl cursor-pointer bg-blue-50 hover:bg-blue-100 transition duration-300 p-6">
                     <div class="flex flex-col items-center justify-center pt-5 pb-6">
@@ -30,105 +33,28 @@
                         <p id="file-name-label" class="mb-2 text-xl text-blue-800 font-extrabold">Foto auswählen oder aufnehmen 📸</p>
                         <p class="text-xs text-blue-500 font-medium">Unterstützt alle Bildformate</p>
                     </div>
-                    <input id="dropzone-file" type="file" class="hidden" accept="image/*" />
+                    <input id="dropzone-file" type="file" name="photo" class="hidden" accept="image/*" />
                 </label>
-            </div>
-
-            <button type="submit" id="upload-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xl py-4 px-4 rounded-2xl transition duration-300 shadow-[0_4px_0_rgb(29,78,216)] hover:shadow-[0_2px_0_rgb(29,78,216)] hover:translate-y-[2px]">
+            </div> 
+            
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xl py-4 px-4 rounded-2xl transition duration-300 shadow-[0_4px_0_rgb(29,78,216)] hover:shadow-[0_2px_0_rgb(29,78,216)] hover:translate-y-[2px]">
                 Hochladen 🚀
             </button>
-
-            <!-- Spinner -->
-            <div id="upload-spinner" class="hidden flex flex-col items-center space-y-2">
-                <div class="w-8 h-8 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
-                <p class="text-sm text-blue-600 font-medium">Wird hochgeladen...</p>
-            </div>
         </form>
-
+        
         <div class="mt-8 text-sm text-slate-400">
-            <a href="gallery.html" class="underline hover:text-blue-600">Zur Fotogalerie</a> | <a href="admin.html" class="underline hover:text-blue-600">Admin-Bereich</a>
+            <a href="/gallery" class="underline hover:text-blue-600">Zur Fotogalerie</a> | <a href="/admin" class="underline hover:text-blue-600">Admin-Bereich</a>
         </div>
     </div>
 
     <script>
-        // ── Supabase Setup ──
-        const SUPABASE_URL = 'https://vshlpndqktpmtnwarxui.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_4RadbUY4N2NV5SeaUrvlPg_spcQoznE';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const BUCKET = 'lyon-photos';
-
-        // ── File selection ──
+        // Zeigt an, ob das Foto geladen wurde
         document.getElementById('dropzone-file').addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 const fileName = e.target.files[0].name;
                 const labelText = document.getElementById('file-name-label');
                 labelText.textContent = `Bereit: ${fileName}`;
                 labelText.className = "mb-2 text-xl text-emerald-700 font-extrabold";
-            }
-        });
-
-        // ── Upload logic ──
-        document.getElementById('upload-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const fileInput = document.getElementById('dropzone-file');
-            const flashMsg = document.getElementById('flash-message');
-            const errorMsg = document.getElementById('error-message');
-            const spinner = document.getElementById('upload-spinner');
-            const uploadBtn = document.getElementById('upload-btn');
-
-            flashMsg.classList.add('hidden');
-            errorMsg.classList.add('hidden');
-
-            if (!fileInput.files || fileInput.files.length === 0) {
-                errorMsg.textContent = 'Kein Foto ausgewählt!';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            const file = fileInput.files[0];
-            const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-            if (!allowedTypes.includes(file.type)) {
-                errorMsg.textContent = 'Ungültiger Dateityp! Bitte wähle ein gültiges Bild (JPG, PNG, GIF, WebP).';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            // Generate unique filename
-            const timestamp = Date.now();
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const filePath = `${timestamp}_${safeName}`;
-
-            // Show spinner, hide button
-            spinner.classList.remove('hidden');
-            uploadBtn.classList.add('hidden');
-
-            try {
-                const { data, error } = await supabase.storage
-                    .from(BUCKET)
-                    .upload(filePath, file, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
-
-                if (error) throw error;
-
-                flashMsg.textContent = 'Foto erfolgreich hochgeladen! 🎉';
-                flashMsg.classList.remove('hidden');
-
-                // Reset form
-                fileInput.value = '';
-                const labelText = document.getElementById('file-name-label');
-                labelText.textContent = 'Foto auswählen oder aufnehmen 📸';
-                labelText.className = "mb-2 text-xl text-blue-800 font-extrabold";
-
-            } catch (err) {
-                console.error('Upload error:', err);
-                errorMsg.textContent = 'Fehler beim Hochladen: ' + (err.message || 'Unbekannter Fehler');
-                errorMsg.classList.remove('hidden');
-            } finally {
-                spinner.classList.add('hidden');
-                uploadBtn.classList.remove('hidden');
             }
         });
     </script>
