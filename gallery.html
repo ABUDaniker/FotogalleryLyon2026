@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fotogallerie - Exkursion Lyon 2026</title>
+    <title>Fotogalerie – Lyon 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         .fade-out { opacity: 0; transition: opacity 1.5s ease-in-out; }
         .fade-in { opacity: 1; transition: opacity 1.5s ease-in-out; }
@@ -12,91 +13,150 @@
     </style>
 </head>
 <body class="bg-slate-900 min-h-screen font-sans text-slate-800 flex flex-col m-0 overflow-hidden">
-    
+
+    <!-- Header -->
     <div class="flex flex-row justify-between items-center bg-blue-800 text-white px-6 py-4 shadow-2xl z-20 relative border-b-4 border-blue-900">
         <div class="flex items-center space-x-4">
             <div class="text-2xl md:text-3xl">🚌</div>
             <div>
                 <h1 class="text-lg md:text-2xl font-extrabold tracking-widest drop-shadow-md uppercase">
-                    Exkursion Lyon 2026
+                    Fotogallery Lyon 2026
                 </h1>
                 <p class="text-xs md:text-sm text-blue-200 font-medium">Live-Momente unserer Reise</p>
             </div>
         </div>
         <div class="flex items-center space-x-4">
-            <a href="/" class="text-xs md:text-sm bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-xl text-white font-bold transition shadow-md">
+            <span id="photo-count" class="text-xs md:text-sm text-blue-200 font-medium"></span>
+            <a href="index.html" class="text-xs md:text-sm bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-xl text-white font-bold transition shadow-md">
                 ➕ Hochladen
             </a>
         </div>
     </div>
 
+    <!-- Presentation Area -->
     <div class="flex-1 flex items-center justify-center relative p-8">
-        {% if photos %}
-        <div id="slide-container" class="bg-white p-4 pb-12 rounded-xl shadow-2xl max-w-lg w-full transform rotate-0 scale-98 aspect-square flex flex-col items-center justify-center">
+        <!-- Loading -->
+        <div id="loader" class="text-center text-slate-400">
+            <div class="w-10 h-10 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4"></div>
+            <p class="text-sm">Fotos werden geladen...</p>
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden text-center text-slate-400 p-8 bg-slate-800 rounded-3xl max-w-md w-full border border-slate-700 shadow-xl">
+            <div class="text-6xl mb-4 opacity-50">📂</div>
+            <h2 class="text-2xl font-extrabold text-white mb-2">Keine Fotos vorhanden</h2>
+            <p class="text-sm text-slate-400 mb-6">Lade als Erster ein Bild von unterwegs hoch!</p>
+            <a href="index.html" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition duration-300">
+                Jetzt hochladen 🚀
+            </a>
+        </div>
+
+        <!-- Slideshow Polaroid -->
+        <div id="slide-container" class="hidden bg-white p-4 pb-12 rounded-xl shadow-2xl max-w-lg w-full transform rotate-0 aspect-square flex flex-col items-center justify-center">
             <div class="w-full h-5/6 overflow-hidden rounded-lg shadow-inner bg-slate-100 flex items-center justify-center">
-                <img id="slide-img" src="{{ url_for('uploaded_file', filename=photos[0]) }}" class="w-full h-full object-cover" alt="Fotogalerie Foto">
+                <img id="slide-img" src="" class="w-full h-full object-cover" alt="Fotogalerie Foto">
             </div>
             <div class="mt-4 text-center font-bold text-blue-600 text-sm md:text-base tracking-wider uppercase">
                 #Lyon2026 🇫🇷
             </div>
         </div>
-        {% else %}
-        <div class="text-center text-slate-400 p-8 bg-slate-800 rounded-3xl max-w-md w-full border border-slate-700 shadow-xl">
-            <div class="text-6xl mb-4 opacity-50">📂</div>
-            <h2 class="text-2xl font-extrabold text-white mb-2">Keine Fotos vorhanden</h2>
-            <p class="text-sm text-slate-400 mb-6">Lade als Erster ein Bild von unterwegs hoch!</p>
-            <a href="/" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl transition duration-300">
-                Jetzt hochladen 🚀
-            </a>
-        </div>
-        {% endif %}
     </div>
 
-    {% if photos %}
     <script>
-        const photos = {{ photos|tojson }};
+        // ── Supabase Setup ──
+        const SUPABASE_URL = 'https://vshlpndqktpmtnwarxui.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_4RadbUY4N2NV5SeaUrvlPg_spcQoznE';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const BUCKET = 'lyon-photos';
+
+        let photos = [];
         let currentIndex = 0;
-        const slideContainer = document.getElementById('slide-container');
-        const imgElement = document.getElementById('slide-img');
+
+        async function loadPhotos() {
+            try {
+                const { data, error } = await sb.storage.from(BUCKET).list('', {
+                    limit: 500,
+                    sortBy: { column: 'created_at', order: 'desc' }
+                });
+
+                if (error) throw error;
+
+                // Filter only image files (skip .emptyFolderPlaceholder etc.)
+                const imageFiles = (data || []).filter(f =>
+                    f.name && /\.(jpg|jpeg|png|gif|webp)$/i.test(f.name)
+                );
+
+                // Build public URLs
+                photos = imageFiles.map(f => {
+                    const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(f.name);
+                    return urlData.publicUrl;
+                });
+
+                document.getElementById('loader').classList.add('hidden');
+
+                if (photos.length === 0) {
+                    document.getElementById('empty-state').classList.remove('hidden');
+                    // Auto-refresh to check for new photos
+                    setTimeout(() => window.location.reload(), 10000);
+                    return;
+                }
+
+                document.getElementById('photo-count').textContent = `${photos.length} Foto${photos.length !== 1 ? 's' : ''}`;
+
+                // Show slideshow
+                const container = document.getElementById('slide-container');
+                const img = document.getElementById('slide-img');
+                container.classList.remove('hidden');
+                img.src = photos[0];
+
+                if (photos.length === 1) {
+                    // Single photo: just auto-refresh for new ones
+                    setTimeout(() => window.location.reload(), 10000);
+                } else {
+                    setInterval(showNextPhoto, 10000);
+                }
+
+            } catch (err) {
+                console.error('Error loading photos:', err);
+                document.getElementById('loader').innerHTML = '<p class="text-red-400">Fehler beim Laden der Fotos.</p>';
+            }
+        }
 
         function showNextPhoto() {
-            // Ausblenden
-            slideContainer.classList.remove('fade-in');
-            slideContainer.classList.add('fade-out');
+            const container = document.getElementById('slide-container');
+            const img = document.getElementById('slide-img');
+
+            // Fade out
+            container.classList.remove('fade-in');
+            container.classList.add('fade-out');
 
             setTimeout(() => {
-                currentIndex = (currentIndex + 1) % photos.length;
-                
-                // Neuladen, falls neue Fotos hinzugekommen sind
+                currentIndex++;
+
+                // Reload page when we've shown all photos (picks up new uploads)
                 if (currentIndex >= photos.length) {
                     window.location.reload();
                     return;
                 }
-                
-                imgElement.src = `/uploads/${photos[currentIndex]}`;
-                
-                // Zufälliger Polaroid Effekt
-                const randomRotate = (Math.random() * 4) - 2; 
-                slideContainer.style.transform = `rotate(${randomRotate}deg) scale(0.98)`;
 
-                // Einblenden
-                slideContainer.classList.remove('fade-out');
-                slideContainer.classList.add('fade-in');
+                img.src = photos[currentIndex];
+
+                // Random polaroid rotation
+                const randomRotate = (Math.random() * 4) - 2;
+                container.style.transform = `rotate(${randomRotate}deg) scale(0.98)`;
+
+                // Fade in
+                container.classList.remove('fade-out');
+                container.classList.add('fade-in');
 
                 setTimeout(() => {
-                    slideContainer.style.transform = `rotate(${randomRotate}deg) scale(1.0)`;
+                    container.style.transform = `rotate(${randomRotate}deg) scale(1.0)`;
                 }, 100);
-            }, 1500); 
+            }, 1500);
         }
 
-        if (photos.length > 0) {
-            if (photos.length === 1) {
-                setTimeout(() => window.location.reload(), 10000);
-            } else {
-                setInterval(showNextPhoto, 10000);
-            }
-        }
+        // Start
+        loadPhotos();
     </script>
-    {% endif %}
 </body>
 </html>
