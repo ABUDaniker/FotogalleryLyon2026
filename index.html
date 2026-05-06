@@ -87,10 +87,14 @@
             }
 
             const file = fileInput.files[0];
-            const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-            if (!allowedTypes.includes(file.type)) {
-                errorMsg.textContent = 'Ungültiger Dateityp! Bitte wähle ein gültiges Bild (JPG, PNG, GIF, WebP).';
+            console.log('Upload starting - File:', file.name, 'Type:', file.type, 'Size:', file.size);
+
+            // Accept all image types (including HEIC from iPhones)
+            if (!file.type.startsWith('image/') && file.type !== '') {
+                const msg = 'Ungültiger Dateityp (' + file.type + ')! Bitte wähle ein Bild.';
+                errorMsg.textContent = msg;
                 errorMsg.classList.remove('hidden');
+                alert(msg);
                 return;
             }
 
@@ -104,12 +108,15 @@
             uploadBtn.classList.add('hidden');
 
             try {
+                console.log('Uploading to Supabase:', filePath);
                 const { data, error } = await supabase.storage
                     .from(BUCKET)
                     .upload(filePath, file, {
                         cacheControl: '3600',
                         upsert: false
                     });
+
+                console.log('Upload result - Data:', data, 'Error:', error);
 
                 if (error) throw error;
 
@@ -124,8 +131,10 @@
 
             } catch (err) {
                 console.error('Upload error:', err);
-                errorMsg.textContent = 'Fehler beim Hochladen: ' + (err.message || 'Unbekannter Fehler');
+                const errMsg = 'Fehler beim Hochladen: ' + (err.message || err.statusCode || JSON.stringify(err));
+                errorMsg.textContent = errMsg;
                 errorMsg.classList.remove('hidden');
+                alert(errMsg);
             } finally {
                 spinner.classList.add('hidden');
                 uploadBtn.classList.remove('hidden');
