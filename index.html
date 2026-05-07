@@ -6,6 +6,7 @@
     <title>Fotogallery Lyon 2026 – Upload</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 </head>
 <body class="bg-blue-50 flex items-center justify-center min-h-screen p-4 font-sans text-slate-800">
     <div class="absolute top-10 left-10 text-6xl opacity-20 transform -rotate-12 hidden md:block">🥐</div>
@@ -24,11 +25,17 @@
 
         <form id="upload-form" class="space-y-6">
             <div class="flex items-center justify-center w-full">
-                <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-48 border-4 border-dashed border-blue-300 rounded-2xl cursor-pointer bg-blue-50 hover:bg-blue-100 transition duration-300 p-6">
-                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                <label for="dropzone-file" class="flex flex-col items-center justify-center w-full min-h-[12rem] border-4 border-dashed border-blue-300 rounded-2xl cursor-pointer bg-blue-50 hover:bg-blue-100 transition duration-300 p-6 relative overflow-hidden">
+                    <!-- Default content -->
+                    <div id="dropzone-content" class="flex flex-col items-center justify-center pt-5 pb-6">
                         <div class="text-4xl mb-3 text-blue-600 animate-bounce">📱</div>
-                        <p id="file-name-label" class="mb-2 text-xl text-blue-800 font-extrabold">Foto auswählen oder aufnehmen 📸</p>
+                        <p id="file-name-label" class="mb-2 text-xl text-blue-800 font-extrabold text-center">Foto auswählen oder aufnehmen 📸</p>
                         <p class="text-xs text-blue-500 font-medium">Unterstützt alle Bildformate</p>
+                    </div>
+                    <!-- Image preview container -->
+                    <div id="preview-container" class="hidden w-full flex flex-col items-center justify-center space-y-2 py-2">
+                        <img id="preview-img" class="h-28 max-w-full object-contain rounded-xl shadow-md border-2 border-emerald-500" src="" alt="Vorschau" />
+                        <p id="preview-file-name" class="text-sm font-extrabold text-emerald-800 text-center px-2"></p>
                     </div>
                     <input id="dropzone-file" type="file" class="hidden" accept="image/*" />
                 </label>
@@ -57,13 +64,55 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const BUCKET = 'lyon-photos';
 
-        // ── File selection ──
-        document.getElementById('dropzone-file').addEventListener('change', function(e) {
+        // ── File selection & Preview (Runs immediately, independent of Supabase) ──
+        document.getElementById('dropzone-file').addEventListener('change', async function(e) {
+            const fileInput = document.getElementById('dropzone-file');
+            const labelText = document.getElementById('file-name-label');
+            const dropzoneContent = document.getElementById('dropzone-content');
+            const previewContainer = document.getElementById('preview-container');
+            const previewImg = document.getElementById('preview-img');
+            const previewFileName = document.getElementById('preview-file-name');
+
             if (e.target.files.length > 0) {
-                const fileName = e.target.files[0].name;
-                const labelText = document.getElementById('file-name-label');
-                labelText.textContent = `Bereit: ${fileName}`;
-                labelText.className = "mb-2 text-xl text-emerald-700 font-extrabold";
+                let file = e.target.files[0];
+                
+                // Show HEIC conversion loader if applicable
+                if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+                    labelText.textContent = "iPhone-Foto (HEIC) wird optimiert... ⏳";
+                    labelText.className = "mb-2 text-xl text-amber-600 font-extrabold animate-pulse text-center";
+                    
+                    try {
+                        if (typeof heic2any !== 'undefined') {
+                            const jpegBlob = await heic2any({
+                                blob: file,
+                                toType: "image/jpeg",
+                                quality: 0.8
+                            });
+                            
+                            const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+                            file = new File([jpegBlob], newName, { type: "image/jpeg" });
+                            
+                            // Re-assign converted file to the input
+                            const dataTransfer = new DataTransfer();
+                            dataTransfer.items.add(file);
+                            fileInput.files = dataTransfer.files;
+                        } else {
+                            console.warn("heic2any NOT loaded, using raw file.");
+                        }
+                    } catch (err) {
+                        console.error("HEIC conversion failed:", err);
+                    }
+                }
+
+                // Show thumbnail image preview
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    previewImg.src = event.target.result;
+                    previewFileName.textContent = `Bereit: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) ✅`;
+                    previewContainer.classList.remove('hidden');
+                    dropzoneContent.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
             }
         });
 
@@ -76,6 +125,9 @@
             const errorMsg = document.getElementById('error-message');
             const spinner = document.getElementById('upload-spinner');
             const uploadBtn = document.getElementById('upload-btn');
+            const dropzoneContent = document.getElementById('dropzone-content');
+            const previewContainer = document.getElementById('preview-container');
+            const previewImg = document.getElementById('preview-img');
 
             flashMsg.classList.add('hidden');
             errorMsg.classList.add('hidden');
@@ -89,7 +141,7 @@
             const file = fileInput.files[0];
             console.log('Upload starting - File:', file.name, 'Type:', file.type, 'Size:', file.size);
 
-            // Accept all image types (including HEIC from iPhones)
+            // Accept all image types (including HEIC from iPhones, which are now converted to JPEG anyway)
             if (!file.type.startsWith('image/') && file.type !== '') {
                 const msg = 'Ungültiger Dateityp (' + file.type + ')! Bitte wähle ein Bild.';
                 errorMsg.textContent = msg;
@@ -126,9 +178,13 @@
 
                 // Reset form
                 fileInput.value = '';
+                previewContainer.classList.add('hidden');
+                previewImg.src = '';
+                dropzoneContent.classList.remove('hidden');
+                
                 const labelText = document.getElementById('file-name-label');
                 labelText.textContent = 'Foto auswählen oder aufnehmen 📸';
-                labelText.className = "mb-2 text-xl text-blue-800 font-extrabold";
+                labelText.className = "mb-2 text-xl text-blue-800 font-extrabold text-center";
 
             } catch (err) {
                 console.error('Upload error:', err);
