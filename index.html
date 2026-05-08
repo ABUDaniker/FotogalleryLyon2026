@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fotogallery Lyon 2026 – Upload</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <script src="supabase.js"></script>
+    <script src="heic2any.js"></script>
 </head>
 <body class="bg-blue-50 flex items-center justify-center min-h-screen p-4 font-sans text-slate-800">
     <div class="absolute top-10 left-10 text-6xl opacity-20 transform -rotate-12 hidden md:block">🥐</div>
@@ -61,8 +61,31 @@
         // ── Supabase Setup ──
         const SUPABASE_URL = 'https://jxharfhlbhwnlnmfcxci.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_NDKQOgvLAdLEFDl7A0A99A_T1T8nfSp';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const BUCKET = 'lyon-photos';
+
+        let supabase;
+        try {
+            if (window.supabase) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else {
+                window.addEventListener('DOMContentLoaded', () => {
+                    showInitialError("⚠️ Verbindungsfehler: Die Datenbank konnte nicht geladen werden. Bitte deaktiviere deinen Adblocker oder den privaten Modus (Tracking-Schutz) deines Browsers!");
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            window.addEventListener('DOMContentLoaded', () => {
+                showInitialError("⚠️ Fehler bei der Initialisierung der Datenbank.");
+            });
+        }
+
+        function showInitialError(msg) {
+            const errorMsg = document.getElementById('error-message');
+            if (errorMsg) {
+                errorMsg.textContent = msg;
+                errorMsg.classList.remove('hidden');
+            }
+        }
 
         // ── File selection & Preview (Runs immediately, independent of Supabase) ──
         document.getElementById('dropzone-file').addEventListener('change', async function(e) {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fotogalerie – Lyon 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
     <style>
         .fade-out { opacity: 0; transition: opacity 1.5s ease-in-out; }
         .fade-in { opacity: 1; transition: opacity 1.5s ease-in-out; }
@@ -66,8 +66,23 @@
         // ── Supabase Setup ──
         const SUPABASE_URL = 'https://jxharfhlbhwnlnmfcxci.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_NDKQOgvLAdLEFDl7A0A99A_T1T8nfSp';
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const BUCKET = 'lyon-photos';
+
+        let sb;
+        try {
+            if (window.supabase) {
+                sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else {
+                window.addEventListener('DOMContentLoaded', () => {
+                    const loader = document.getElementById('loader');
+                    if (loader) {
+                        loader.innerHTML = '<p class="text-red-400 font-bold">⚠️ Verbindungsfehler: Die Galerie-Datenbank konnte nicht geladen werden. Bitte deaktiviere deinen Adblocker oder den privaten Modus deines Browsers!</p>';
+                    }
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
 
         let photos = [];
         let currentIndex = 0;
