@@ -71,10 +71,10 @@
             }
         }
 
-        let supabase;
+        let supabaseClient;
         try {
             if (window.supabase) {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             } else {
                 if (document.readyState === 'loading') {
                     window.addEventListener('DOMContentLoaded', () => {
@@ -192,7 +192,7 @@
 
             try {
                 console.log('Uploading to Supabase:', filePath);
-                const { data, error } = await supabase.storage
+                const { data, error } = await supabaseClient.storage
                     .from(BUCKET)
                     .upload(filePath, file, {
                         cacheControl: '3600',
