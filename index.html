@@ -37,8 +37,8 @@
                         <img id="preview-img" class="h-28 max-w-full object-contain rounded-xl shadow-md border-2 border-emerald-500" src="" alt="Vorschau" />
                         <p id="preview-file-name" class="text-sm font-extrabold text-emerald-800 text-center px-2"></p>
                     </div>
-                    <input id="dropzone-file" type="file" class="hidden" accept="image/*" />
                 </label>
+                <input id="dropzone-file" type="file" class="hidden" accept="image/*" />
             </div>
 
             <button type="submit" id="upload-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xl py-4 px-4 rounded-2xl transition duration-300 shadow-[0_4px_0_rgb(29,78,216)] hover:shadow-[0_2px_0_rgb(29,78,216)] hover:translate-y-[2px]">
@@ -63,27 +63,35 @@
         const SUPABASE_KEY = 'sb_publishable_NDKQOgvLAdLEFDl7A0A99A_T1T8nfSp';
         const BUCKET = 'lyon-photos';
 
-        let supabase;
-        try {
-            if (window.supabase) {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            } else {
-                window.addEventListener('DOMContentLoaded', () => {
-                    showInitialError("⚠️ Verbindungsfehler: Die Datenbank konnte nicht geladen werden. Bitte deaktiviere deinen Adblocker oder den privaten Modus (Tracking-Schutz) deines Browsers!");
-                });
-            }
-        } catch (e) {
-            console.error(e);
-            window.addEventListener('DOMContentLoaded', () => {
-                showInitialError("⚠️ Fehler bei der Initialisierung der Datenbank.");
-            });
-        }
-
         function showInitialError(msg) {
             const errorMsg = document.getElementById('error-message');
             if (errorMsg) {
                 errorMsg.textContent = msg;
                 errorMsg.classList.remove('hidden');
+            }
+        }
+
+        let supabase;
+        try {
+            if (window.supabase) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } else {
+                if (document.readyState === 'loading') {
+                    window.addEventListener('DOMContentLoaded', () => {
+                        showInitialError("⚠️ Verbindungsfehler: Die Datenbank konnte nicht geladen werden. Bitte deaktiviere deinen Adblocker oder den privaten Modus (Tracking-Schutz) deines Browsers!");
+                    });
+                } else {
+                    showInitialError("⚠️ Verbindungsfehler: Die Datenbank konnte nicht geladen werden. Bitte deaktiviere deinen Adblocker oder den privaten Modus (Tracking-Schutz) deines Browsers!");
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            if (document.readyState === 'loading') {
+                window.addEventListener('DOMContentLoaded', () => {
+                    showInitialError("⚠️ Fehler bei der Initialisierung der Datenbank.");
+                });
+            } else {
+                showInitialError("⚠️ Fehler bei der Initialisierung der Datenbank.");
             }
         }
 
