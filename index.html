@@ -38,7 +38,7 @@
                         <p id="preview-file-name" class="text-sm font-extrabold text-emerald-800 text-center px-2"></p>
                     </div>
                 </label>
-                <input id="dropzone-file" type="file" class="hidden" accept="image/*" />
+                <input id="dropzone-file" type="file" class="hidden" accept="image/*" multiple />
             </div>
 
             <button type="submit" id="upload-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xl py-4 px-4 rounded-2xl transition duration-300 shadow-[0_4px_0_rgb(29,78,216)] hover:shadow-[0_2px_0_rgb(29,78,216)] hover:translate-y-[2px]">
@@ -54,6 +54,27 @@
 
         <div class="mt-8 text-sm text-slate-400">
             <a href="gallery.html" class="underline hover:text-blue-600">Zur Fotogalerie</a> | <a href="admin.html" class="underline hover:text-blue-600">Admin-Bereich</a>
+        </div>
+    </div>
+
+    <!-- Upload Policy Modal -->
+    <div id="policy-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold text-blue-900 mb-4">BBW Kodex - Upload Richtlinien</h2>
+            <div class="text-sm text-slate-700 space-y-3 mb-6">
+                <p>Der BBW Kodex gilt auch während Exkursionen. Mit dem Hochladen dieses Bildes bestätige ich, dass ich mich an den BBW Schulkodex halte:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>Einwilligung:</strong> Ich lade keine Bilder von Personen hoch, die ohne deren Wissen oder gegen deren Willen gemacht wurden oder veröffentlicht werden.</li>
+                    <li><strong>Respekt & Würde:</strong> Ich achte die Würde und Individualität anderer und lade keine Bilder hoch, die Mitmenschen abwerten, bloßstellen oder durch beleidigendes, rassistisches oder sexistisches Verhalten herabwürdigen.</li>
+                    <li><strong>Integrität:</strong> Ich respektiere die persönliche Integrität meiner Mitmenschen und setze klare Grenzen, um diese zu schützen.</li>
+                    <li><strong>Keine unzulässigen Inhalte:</strong> Ich verbreite kein Material, das pornografisch ist oder Gewalt verherrlicht.</li>
+                    <li>Ich handele rücksichtsvoll und behandle andere so, wie ich selbst behandelt werden möchte.</li>
+                </ul>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="agree-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition">Ich stimme zu & Hochladen</button>
+                <button id="cancel-btn" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-4 rounded-xl transition">Abbrechen</button>
+            </div>
         </div>
     </div>
 
@@ -105,51 +126,104 @@
             const previewFileName = document.getElementById('preview-file-name');
 
             if (e.target.files.length > 0) {
-                let file = e.target.files[0];
+                const dataTransfer = new DataTransfer();
+                let heicCount = 0;
                 
-                // Show HEIC conversion loader if applicable
-                if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
-                    labelText.textContent = "iPhone-Foto (HEIC) wird optimiert... ⏳";
-                    labelText.className = "mb-2 text-xl text-amber-600 font-extrabold animate-pulse text-center";
-                    
-                    try {
-                        if (typeof heic2any !== 'undefined') {
-                            const jpegBlob = await heic2any({
-                                blob: file,
-                                toType: "image/jpeg",
-                                quality: 0.8
-                            });
-                            
-                            const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
-                            file = new File([jpegBlob], newName, { type: "image/jpeg" });
-                            
-                            // Re-assign converted file to the input
-                            const dataTransfer = new DataTransfer();
-                            dataTransfer.items.add(file);
-                            fileInput.files = dataTransfer.files;
-                        } else {
-                            console.warn("heic2any NOT loaded, using raw file.");
-                        }
-                    } catch (err) {
-                        console.error("HEIC conversion failed:", err);
+                // Check if there are any HEIC files to show the loading state early
+                for (let i = 0; i < e.target.files.length; i++) {
+                    const file = e.target.files[i];
+                    if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+                        heicCount++;
                     }
                 }
 
-                // Show thumbnail image preview
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    previewImg.src = event.target.result;
-                    previewFileName.textContent = `Bereit: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) ✅`;
-                    previewContainer.classList.remove('hidden');
-                    dropzoneContent.classList.add('hidden');
-                };
-                reader.readAsDataURL(file);
+                if (heicCount > 0) {
+                    labelText.textContent = `Optimiere ${heicCount} iPhone-Foto(s) (HEIC)... ⏳`;
+                    labelText.className = "mb-2 text-xl text-amber-600 font-extrabold animate-pulse text-center";
+                }
+
+                for (let i = 0; i < e.target.files.length; i++) {
+                    let file = e.target.files[i];
+                    
+                    if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+                        try {
+                            if (typeof heic2any !== 'undefined') {
+                                const jpegBlob = await heic2any({
+                                    blob: file,
+                                    toType: "image/jpeg",
+                                    quality: 0.8
+                                });
+                                
+                                const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+                                file = new File([jpegBlob], newName, { type: "image/jpeg" });
+                            } else {
+                                console.warn("heic2any NOT loaded, using raw file.");
+                            }
+                        } catch (err) {
+                            console.error("HEIC conversion failed for " + file.name + ":", err);
+                        }
+                    }
+                    dataTransfer.items.add(file);
+                }
+                
+                // Re-assign converted files to the input
+                fileInput.files = dataTransfer.files;
+
+                // Show thumbnail image preview of the first image
+                if (fileInput.files.length > 0) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        previewImg.src = event.target.result;
+                        previewFileName.textContent = `${fileInput.files.length} Foto(s) ausgewählt ✅`;
+                        previewContainer.classList.remove('hidden');
+                        dropzoneContent.classList.add('hidden');
+                    };
+                    reader.readAsDataURL(fileInput.files[0]);
+                }
             }
         });
 
         // ── Upload logic ──
-        document.getElementById('upload-form').addEventListener('submit', async function(e) {
+        const modal = document.getElementById('policy-modal');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const agreeBtn = document.getElementById('agree-btn');
+
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
             e.preventDefault();
+
+            const fileInput = document.getElementById('dropzone-file');
+            const errorMsg = document.getElementById('error-message');
+            errorMsg.classList.add('hidden');
+            document.getElementById('flash-message').classList.add('hidden');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                errorMsg.textContent = 'Kein Foto ausgewählt!';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            // Check file types
+            for (let i = 0; i < fileInput.files.length; i++) {
+                let file = fileInput.files[i];
+                if (!file.type.startsWith('image/') && file.type !== '') {
+                    const msg = 'Ungültiger Dateityp (' + file.name + ')! Bitte wähle nur Bilder.';
+                    errorMsg.textContent = msg;
+                    errorMsg.classList.remove('hidden');
+                    alert(msg);
+                    return;
+                }
+            }
+
+            // Show modal
+            modal.classList.remove('hidden');
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+
+        agreeBtn.addEventListener('click', async () => {
+            modal.classList.add('hidden');
 
             const fileInput = document.getElementById('dropzone-file');
             const flashMsg = document.getElementById('flash-message');
@@ -160,52 +234,55 @@
             const previewContainer = document.getElementById('preview-container');
             const previewImg = document.getElementById('preview-img');
 
-            flashMsg.classList.add('hidden');
-            errorMsg.classList.add('hidden');
-
-            if (!fileInput.files || fileInput.files.length === 0) {
-                errorMsg.textContent = 'Kein Foto ausgewählt!';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            const file = fileInput.files[0];
-            console.log('Upload starting - File:', file.name, 'Type:', file.type, 'Size:', file.size);
-
-            // Accept all image types (including HEIC from iPhones, which are now converted to JPEG anyway)
-            if (!file.type.startsWith('image/') && file.type !== '') {
-                const msg = 'Ungültiger Dateityp (' + file.type + ')! Bitte wähle ein Bild.';
-                errorMsg.textContent = msg;
-                errorMsg.classList.remove('hidden');
-                alert(msg);
-                return;
-            }
-
-            // Generate unique filename
-            const timestamp = Date.now();
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const filePath = `${timestamp}_${safeName}`;
-
             // Show spinner, hide button
             spinner.classList.remove('hidden');
             uploadBtn.classList.add('hidden');
 
-            try {
-                console.log('Uploading to Supabase:', filePath);
-                const { data, error } = await supabaseClient.storage
-                    .from(BUCKET)
-                    .upload(filePath, file, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
+            let successCount = 0;
+            let errorCount = 0;
 
-                console.log('Upload result - Data:', data, 'Error:', error);
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const file = fileInput.files[i];
+                console.log('Upload starting - File:', file.name, 'Type:', file.type, 'Size:', file.size);
 
-                if (error) throw error;
+                // Generate unique filename
+                const timestamp = Date.now();
+                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const filePath = `${timestamp}_${i}_${safeName}`;
 
-                flashMsg.textContent = 'Foto erfolgreich hochgeladen! 🎉';
+                try {
+                    console.log('Uploading to Supabase:', filePath);
+                    const { data, error } = await supabaseClient.storage
+                        .from(BUCKET)
+                        .upload(filePath, file, {
+                            cacheControl: '3600',
+                            upsert: false
+                        });
+
+                    console.log('Upload result - Data:', data, 'Error:', error);
+
+                    if (error) throw error;
+                    successCount++;
+                } catch (err) {
+                    console.error('Upload error for ' + file.name + ':', err);
+                    errorCount++;
+                }
+            }
+
+            spinner.classList.add('hidden');
+            uploadBtn.classList.remove('hidden');
+
+            if (errorCount > 0) {
+                const errMsg = `${errorCount} von ${fileInput.files.length} Fotos konnten nicht hochgeladen werden.`;
+                errorMsg.textContent = errMsg;
+                errorMsg.classList.remove('hidden');
+                alert(errMsg);
+            }
+
+            if (successCount > 0) {
+                flashMsg.textContent = `${successCount} Foto(s) erfolgreich hochgeladen! 🎉`;
                 flashMsg.classList.remove('hidden');
-                alert('✅ Foto erfolgreich hochgeladen!');
+                if (errorCount === 0) alert('✅ Alle Fotos erfolgreich hochgeladen!');
 
                 // Reset form
                 fileInput.value = '';
@@ -216,16 +293,6 @@
                 const labelText = document.getElementById('file-name-label');
                 labelText.textContent = 'Foto auswählen oder aufnehmen 📸';
                 labelText.className = "mb-2 text-xl text-blue-800 font-extrabold text-center";
-
-            } catch (err) {
-                console.error('Upload error:', err);
-                const errMsg = 'Fehler beim Hochladen: ' + (err.message || err.statusCode || JSON.stringify(err));
-                errorMsg.textContent = errMsg;
-                errorMsg.classList.remove('hidden');
-                alert(errMsg);
-            } finally {
-                spinner.classList.add('hidden');
-                uploadBtn.classList.remove('hidden');
             }
         });
     </script>
